@@ -19,3 +19,15 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 智谱AI配置
+zhipu:
+  api-key: 0d5462f8cc444939ad48e8f2ed3cf1ef.Zx8uFDcBDOMzFzwX
+  model: glm-4.5-air
+  embedding-model: embedding-3
+
+# DeepSeek AI配置 (OpenAI兼容接口) deepseek-chat
+deepseek:
+  api-key: sk-68f8259100f4446eaeeb802ede84ad01
+  model: deepseek-v4-flash
+  base-url: https://api.deepseek.com
