@@ -1,0 +1,6 @@
+dependencies {
+    implementation 'com.baomidou:mybatis-plus:3.5.9'
+    implementation 'cn.hutool:hutool-all:5.8.26'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+}

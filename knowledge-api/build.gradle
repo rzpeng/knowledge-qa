@@ -1,0 +1,17 @@
+apply plugin: 'org.springframework.boot'
+
+dependencies {
+    implementation project(':knowledge-service')
+    implementation project(':knowledge-core')
+
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    implementation 'com.baomidou:mybatis-plus-spring-boot3-starter:3.5.9'
+// Milvus
+    implementation('io.milvus:milvus-sdk-java:2.4.1') {
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+    }
+    // 工具类
+    implementation 'cn.hutool:hutool-all:5.8.26'
+}

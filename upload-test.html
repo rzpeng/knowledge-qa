@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>文档上传测试</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>文档上传测试</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="file" id="fileInput" accept=".txt,.md,.pdf,.docx">
+        <button type="submit">上传</button>
+    </form>
+    <div id="result"></div>
+    <div id="status"></div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('fileInput');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            document.getElementById('status').textContent = '上传中...';
+
+            try {
+                const response = await fetch('/api/documents/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                document.getElementById('result').innerHTML = `
+                    <h3>上传成功!</h3>
+                    <p>文档ID: ${result.id}</p>
+                    <p>标题: ${result.title}</p>
+                    <p>状态: ${result.status}</p>
+                `;
+                document.getElementById('status').textContent = '';
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<p style="color: red;">上传失败: ${error.message}</p>`;
+                document.getElementById('status').textContent = '';
+            }
+        });
+    </script>
+</body>
+</html>

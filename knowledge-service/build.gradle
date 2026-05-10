@@ -1,0 +1,26 @@
+dependencies {
+    implementation project(':knowledge-core')
+
+    implementation 'com.baomidou:mybatis-plus:3.5.9'
+
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // LangChain4j - Try different version
+    implementation 'dev.langchain4j:langchain4j:0.34.0'
+    implementation 'dev.langchain4j:langchain4j-zhipu-ai:0.34.0'
+    implementation 'dev.langchain4j:langchain4j-open-ai:0.34.0'
+
+    // Milvus
+    implementation('io.milvus:milvus-sdk-java:2.4.1') {
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+    }
+
+    // 文档解析
+    implementation 'org.apache.poi:poi-ooxml:5.2.5'
+    implementation 'org.apache.pdfbox:pdfbox:3.0.2'
+
+    // 工具类
+    implementation 'cn.hutool:hutool-all:5.8.26'
+}
