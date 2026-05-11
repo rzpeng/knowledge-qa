@@ -182,45 +182,57 @@ CREATE TABLE IF NOT EXISTS sys_role_region (
 -- 初始化默认菜单数据
 INSERT INTO sys_menu (name, parent_id, type, permission, path, component, icon, sort_order) VALUES
 ('系统管理', 0, 0, NULL, '/system', NULL, 'Setting', 1),
-('用户管理', 2, 1, 'system:user:list', '/system/user', 'system/UserView', 'User', 1),
-('账号管理', 2, 1, 'system:account:list', '/system/account', 'system/AccountView', 'Key', 2),
-('角色管理', 2, 1, 'system:role:list', '/system/role', 'system/RoleView', 'Avatar', 3),
-('部门管理', 2, 1, 'system:dept:list', '/system/dept', 'system/DeptView', 'Organization', 4),
-('菜单管理', 2, 1, 'system:menu:list', '/system/menu', 'system/MenuView', 'Menu', 5),
-('地区管理', 2, 1, 'system:region:list', '/system/region', 'system/RegionView', 'MapLocation', 6);
+('用户管理', 1, 1, 'system:user:list', '/system/user', 'system/UserView', 'User', 1),
+('账号管理', 1, 1, 'system:account:list', '/system/account', 'system/AccountView', 'Key', 2),
+('角色管理', 1, 1, 'system:role:list', '/system/role', 'system/RoleView', 'Avatar', 3),
+('部门管理', 1, 1, 'system:dept:list', '/system/dept', 'system/DeptView', 'Organization', 4),
+('菜单管理', 1, 1, 'system:menu:list', '/system/menu', 'system/MenuView', 'Menu', 5),
+('地区管理', 1, 1, 'system:region:list', '/system/region', 'system/RegionView', 'MapLocation', 6);
 
 -- 用户管理按钮权限
-INSERT INTO sys_menu (name, parent_id, type, permission, sort_order) VALUES
-('用户新增', (SELECT id FROM sys_menu WHERE permission = 'system:user:list'), 2, 'system:user:add', 1),
-('用户编辑', (SELECT id FROM sys_menu WHERE permission = 'system:user:list'), 2, 'system:user:edit', 2),
-('用户删除', (SELECT id FROM sys_menu WHERE permission = 'system:user:list'), 2, 'system:user:delete', 3);
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '用户新增', id, 2, 'system:user:add', 1 FROM sys_menu WHERE permission = 'system:user:list';
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '用户编辑', id, 2, 'system:user:edit', 2 FROM sys_menu WHERE permission = 'system:user:list';
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '用户删除', id, 2, 'system:user:delete', 3 FROM sys_menu WHERE permission = 'system:user:list';
 
 -- 账号管理按钮权限
-INSERT INTO sys_menu (name, parent_id, type, permission, sort_order) VALUES
-('账号新增', (SELECT id FROM sys_menu WHERE permission = 'system:account:list'), 2, 'system:account:add', 1),
-('账号编辑', (SELECT id FROM sys_menu WHERE permission = 'system:account:list'), 2, 'system:account:edit', 2),
-('账号删除', (SELECT id FROM sys_menu WHERE permission = 'system:account:list'), 2, 'system:account:delete', 3);
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '账号新增', id, 2, 'system:account:add', 1 FROM sys_menu WHERE permission = 'system:account:list';
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '账号编辑', id, 2, 'system:account:edit', 2 FROM sys_menu WHERE permission = 'system:account:list';
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '账号删除', id, 2, 'system:account:delete', 3 FROM sys_menu WHERE permission = 'system:account:list';
 
 -- 角色管理按钮权限
-INSERT INTO sys_menu (name, parent_id, type, permission, sort_order) VALUES
-('角色新增', (SELECT id FROM sys_menu WHERE permission = 'system:role:list'), 2, 'system:role:add', 1),
-('角色编辑', (SELECT id FROM sys_menu WHERE permission = 'system:role:list'), 2, 'system:role:edit', 2),
-('角色删除', (SELECT id FROM sys_menu WHERE permission = 'system:role:list'), 2, 'system:role:delete', 3);
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '角色新增', id, 2, 'system:role:add', 1 FROM sys_menu WHERE permission = 'system:role:list';
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '角色编辑', id, 2, 'system:role:edit', 2 FROM sys_menu WHERE permission = 'system:role:list';
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '角色删除', id, 2, 'system:role:delete', 3 FROM sys_menu WHERE permission = 'system:role:list';
 
 -- 部门管理按钮权限
-INSERT INTO sys_menu (name, parent_id, type, permission, sort_order) VALUES
-('部门新增', (SELECT id FROM sys_menu WHERE permission = 'system:dept:list'), 2, 'system:dept:add', 1),
-('部门编辑', (SELECT id FROM sys_menu WHERE permission = 'system:dept:list'), 2, 'system:dept:edit', 2),
-('部门删除', (SELECT id FROM sys_menu WHERE permission = 'system:dept:list'), 2, 'system:dept:delete', 3);
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '部门新增', id, 2, 'system:dept:add', 1 FROM sys_menu WHERE permission = 'system:dept:list';
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '部门编辑', id, 2, 'system:dept:edit', 2 FROM sys_menu WHERE permission = 'system:dept:list';
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '部门删除', id, 2, 'system:dept:delete', 3 FROM sys_menu WHERE permission = 'system:dept:list';
 
 -- 菜单管理按钮权限
-INSERT INTO sys_menu (name, parent_id, type, permission, sort_order) VALUES
-('菜单新增', (SELECT id FROM sys_menu WHERE permission = 'system:menu:list'), 2, 'system:menu:add', 1),
-('菜单编辑', (SELECT id FROM sys_menu WHERE permission = 'system:menu:list'), 2, 'system:menu:edit', 2),
-('菜单删除', (SELECT id FROM sys_menu WHERE permission = 'system:menu:list'), 2, 'system:menu:delete', 3);
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '菜单新增', id, 2, 'system:menu:add', 1 FROM sys_menu WHERE permission = 'system:menu:list';
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '菜单编辑', id, 2, 'system:menu:edit', 2 FROM sys_menu WHERE permission = 'system:menu:list';
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '菜单删除', id, 2, 'system:menu:delete', 3 FROM sys_menu WHERE permission = 'system:menu:list';
 
 -- 地区管理按钮权限
-INSERT INTO sys_menu (name, parent_id, type, permission, sort_order) VALUES
-('地区新增', (SELECT id FROM sys_menu WHERE permission = 'system:region:list'), 2, 'system:region:add', 1),
-('地区编辑', (SELECT id FROM sys_menu WHERE permission = 'system:region:list'), 2, 'system:region:edit', 2),
-('地区删除', (SELECT id FROM sys_menu WHERE permission = 'system:region:list'), 2, 'system:region:delete', 3);
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '地区新增', id, 2, 'system:region:add', 1 FROM sys_menu WHERE permission = 'system:region:list';
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '地区编辑', id, 2, 'system:region:edit', 2 FROM sys_menu WHERE permission = 'system:region:list';
+INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
+SELECT '地区删除', id, 2, 'system:region:delete', 3 FROM sys_menu WHERE permission = 'system:region:list';
