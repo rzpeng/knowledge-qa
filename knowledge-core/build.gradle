@@ -1,6 +1,7 @@
 dependencies {
     implementation 'com.baomidou:mybatis-plus:3.5.9'
     implementation 'cn.hutool:hutool-all:5.8.26'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
     runtimeOnly 'com.mysql:mysql-connector-j'
 
 }
