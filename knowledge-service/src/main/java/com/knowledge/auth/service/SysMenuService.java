@@ -25,7 +25,7 @@ public class SysMenuService {
         return buildTree(all, 0L);
     }
 
-    private List<SysMenu> buildTree(List<SysMenu> all, Long parentId) {
+    public List<SysMenu> buildTree(List<SysMenu> all, Long parentId) {
         List<SysMenu> children = all.stream()
                 .filter(m -> Objects.equals(m.getParentId(), parentId))
                 .collect(Collectors.toList());
