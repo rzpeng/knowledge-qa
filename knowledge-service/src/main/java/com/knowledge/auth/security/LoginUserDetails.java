@@ -37,4 +37,12 @@ public class LoginUserDetails implements UserDetails {
     @Override public boolean isAccountNonLocked() { return true; }
     @Override public boolean isCredentialsNonExpired() { return true; }
     @Override public boolean isEnabled() { return true; }
+
+    // Manual getters/setters for Lombok compatibility with Gradle 9.5
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+    public String getUserName() { return userName; }
+    public void setUserName(String userName) { this.userName = userName; }
+    public Integer getIsSuperAdmin() { return isSuperAdmin; }
+    public void setIsSuperAdmin(Integer isSuperAdmin) { this.isSuperAdmin = isSuperAdmin; }
 }
