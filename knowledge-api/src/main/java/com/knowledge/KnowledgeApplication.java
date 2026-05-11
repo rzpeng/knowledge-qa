@@ -8,7 +8,7 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @ComponentScan(basePackages = "com.knowledge")
-@MapperScan("com.knowledge.mapper")
+@MapperScan({"com.knowledge.mapper", "com.knowledge.auth.mapper"})
 @ConditionalOnProperty(name = "spring.main.allow-bean-definition-overriding", havingValue = "true")
 public class KnowledgeApplication {
 
