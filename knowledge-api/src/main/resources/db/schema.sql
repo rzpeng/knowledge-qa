@@ -171,6 +171,12 @@ CREATE TABLE IF NOT EXISTS sys_role_dept (
     UNIQUE KEY uk_role_dept (role_id, dept_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色数据权限部门关联表';
 
+-- 给知识文档表增加部门和地区字段
+ALTER TABLE knowledge_document
+    ADD COLUMN dept_id BIGINT COMMENT '所属部门ID',
+    ADD COLUMN region_id BIGINT COMMENT '所属地区ID',
+    ADD COLUMN create_by VARCHAR(100) COMMENT '创建人';
+
 -- 角色-地区关联表(自定义数据权限)
 CREATE TABLE IF NOT EXISTS sys_role_region (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',

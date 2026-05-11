@@ -30,5 +30,11 @@ public class KnowledgeDocument {
 
     private LocalDateTime createTime;
 
+    private Long deptId;
+
+    private Long regionId;
+
+    private String createBy;
+
     private LocalDateTime updateTime;
 }
