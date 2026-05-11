@@ -6,6 +6,6 @@ import com.knowledge.entity.KnowledgeDocument;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-@DataPermission(tableAlias = "kd")
+@DataPermission
 public interface KnowledgeDocumentMapper extends BaseMapper<KnowledgeDocument> {
 }

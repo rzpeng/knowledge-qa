@@ -3,6 +3,7 @@ package com.knowledge.service;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.knowledge.auth.security.LoginUserDetails;
 import com.knowledge.dto.DocumentDTO;
 import com.knowledge.config.FileProperties;
 import com.knowledge.entity.KnowledgeChunk;
@@ -14,6 +15,8 @@ import com.knowledge.mapper.KnowledgeDocumentMapper;
 import com.knowledge.rag.MilvusVectorStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -65,6 +68,10 @@ public class KnowledgeDocumentService {
         document.setFileSize(file.getSize());
         document.setStatus(DocumentStatus.PROCESSING.getCode());
         document.setChunkCount(0);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof LoginUserDetails loginUser) {
+            document.setCreateBy(loginUser.getUsername());
+        }
         document.setCreateTime(LocalDateTime.now());
         document.setUpdateTime(LocalDateTime.now());
         documentMapper.insert(document);
