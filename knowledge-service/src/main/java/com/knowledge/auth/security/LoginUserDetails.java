@@ -26,8 +26,16 @@ public class LoginUserDetails implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         if (isSuperAdmin != null && isSuperAdmin == 1) {
-            return List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"));
+            List<GrantedAuthority> authorities = new java.util.ArrayList<>();
+            authorities.add(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"));
+            if (permissions != null) {
+                permissions.stream()
+                        .map(SimpleGrantedAuthority::new)
+                        .forEach(authorities::add);
+            }
+            return authorities;
         }
+        if (permissions == null) return List.of();
         return permissions.stream()
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());

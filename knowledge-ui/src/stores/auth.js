@@ -32,7 +32,11 @@ export const useAuthStore = defineStore('auth', {
     async loadUserInfo() {
       try {
         const res = await getUserInfo()
-        this.userInfo = res.data
+        // Prevent race condition: if login() already populated userInfo,
+        // don't overwrite with stale data from this async call
+        if (!this.userInfo?.accessToken) {
+          this.userInfo = res.data
+        }
         this.permissions = res.data.permissions || []
         const menuRes = await getUserMenus()
         this.menus = menuRes.data || []

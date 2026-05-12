@@ -53,7 +53,16 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         // Get permissions
         List<String> permissions = new ArrayList<>();
-        if (account.getIsSuperAdmin() != 1) {
+        if (account.getIsSuperAdmin() == 1) {
+            // Super admin: get all menu permissions so @PreAuthorize checks pass
+            List<SysMenu> allMenus = menuMapper.selectList(
+                    new LambdaQueryWrapper<SysMenu>()
+                            .isNotNull(SysMenu::getPermission)
+            );
+            permissions = allMenus.stream().map(SysMenu::getPermission)
+                    .filter(p -> p != null && !p.isEmpty())
+                    .collect(Collectors.toList());
+        } else {
             List<SysUserRole> userRoles = userRoleMapper.selectList(
                     new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, user.getId())
             );

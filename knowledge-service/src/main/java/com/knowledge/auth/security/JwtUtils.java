@@ -30,11 +30,12 @@ public class JwtUtils {
         key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateAccessToken(Long userId, Long accountId, String username, List<String> permissions) {
+    public String generateAccessToken(Long userId, Long accountId, String username, Integer isSuperAdmin, List<String> permissions) {
         return Jwts.builder()
                 .subject(username)
                 .claim("userId", userId)
                 .claim("accountId", accountId)
+                .claim("isSuperAdmin", isSuperAdmin)
                 .claim("permissions", permissions)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessTokenExpire))

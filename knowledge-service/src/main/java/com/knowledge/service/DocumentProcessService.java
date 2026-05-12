@@ -9,8 +9,8 @@ import com.knowledge.enums.FileType;
 import com.knowledge.mapper.KnowledgeChunkMapper;
 import com.knowledge.mapper.KnowledgeDocumentMapper;
 import com.knowledge.rag.MilvusVectorStore;
+import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.output.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -33,6 +34,12 @@ public class DocumentProcessService {
     private final MilvusVectorStore vectorStore;
     private final EmbeddingModel embeddingModel;
     private final RagProperties ragProperties;
+
+
+    private static final int MAX_RETRIES = 3;
+    private static final long INITIAL_BACKOFF_MS = 3000;
+    private static final int BATCH_SIZE = 5;
+
 
     @Async
     public void processDocumentAsync(Long documentId, File file) {
@@ -61,14 +68,9 @@ public class DocumentProcessService {
         );
 
         List<Long> vectorIds = new ArrayList<>();
-        
+
         try {
-            List<float[]> vectors = new ArrayList<>();
-            for (String chunk : chunks) {
-                Response<dev.langchain4j.data.embedding.Embedding> response = embeddingModel.embed(chunk);
-                float[] vector = response.content().vector();
-                vectors.add(vector);
-            }
+            List<float[]> vectors = embedWithRetry(chunks);
 
             vectorIds = vectorStore.insert(chunks, vectors, documentId);
 
@@ -85,15 +87,90 @@ public class DocumentProcessService {
             document.setStatus(DocumentStatus.SUCCESS.getCode());
             log.info("文档 {} 处理成功，向量化完成", documentId);
         } catch (Exception e) {
-            log.warn("文档 {} 向量化失败，但文档已保存: {}", documentId, e.getMessage());
-            // 如果向量化失败，仍然标记为成功，但记录错误信息
-            document.setStatus(DocumentStatus.SUCCESS.getCode());
+            log.error("文档 {} 向量化失败，已重试{}次: {}", documentId, MAX_RETRIES, e.getMessage());
+            document.setStatus(DocumentStatus.FAILED.getCode());
             document.setErrorMsg("向量化失败: " + e.getMessage());
+            throw new RuntimeException("文档向量化失败", e);
         }
 
         document.setChunkCount(chunks.size());
         document.setUpdateTime(LocalDateTime.now());
         documentMapper.updateById(document);
+    }
+
+    private List<float[]> embedWithRetry(List<String> chunks) throws Exception {
+        log.info("开始向量化，共{}个文本块", chunks.size());
+
+        int totalBatches = (chunks.size() + BATCH_SIZE - 1) / BATCH_SIZE;
+        log.info("分为{}批处理，每批最多{}个", totalBatches, BATCH_SIZE);
+
+        List<float[]> allVectors = new ArrayList<>();
+        int processedChunks = 0;
+
+        for (int batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
+            int fromIndex = batchIdx * BATCH_SIZE;
+            int toIndex = Math.min(fromIndex + BATCH_SIZE, chunks.size());
+            List<String> batchChunks = chunks.subList(fromIndex, toIndex);
+
+            log.info("处理第{}/{}批，包含{}个文本块", batchIdx + 1, totalBatches, batchChunks.size());
+
+            List<float[]> batchVectors = embedBatchWithRetry(batchChunks, batchIdx + 1, totalBatches);
+            allVectors.addAll(batchVectors);
+            processedChunks += batchChunks.size();
+
+            log.info("累计处理{}/{}个文本块，获得{}个向量",
+                    processedChunks, chunks.size(), allVectors.size());
+        }
+
+        log.info("向量化完成，共{}个向量", allVectors.size());
+        return allVectors;
+    }
+
+    private List<float[]> embedBatchWithRetry(List<String> batchChunks, int currentBatch, int totalBatches)
+            throws Exception {
+        List<float[]> vectors = new ArrayList<>();
+        int failedCount = 0;
+
+        for (int i = 0; i < batchChunks.size(); i++) {
+            Exception lastException = null;
+            long backoffMs = INITIAL_BACKOFF_MS;
+            boolean success = false;
+
+            for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                try {
+                    TextSegment segment = TextSegment.from(batchChunks.get(i));
+                    dev.langchain4j.data.embedding.Embedding embedding =
+                            embeddingModel.embed(segment).content();
+                    vectors.add(embedding.vector());
+                    success = true;
+                    break;
+                } catch (Exception e) {
+                    lastException = e;
+                    log.warn("第{}/{}批第{}个文本块向量化失败（第{}/{}次）: {}",
+                            currentBatch, totalBatches, i + 1, attempt, MAX_RETRIES, e.getMessage());
+                    if (attempt < MAX_RETRIES) {
+                        TimeUnit.MILLISECONDS.sleep(backoffMs);
+                        backoffMs *= 2;
+                    }
+                }
+            }
+
+            if (!success) {
+                failedCount++;
+                log.error("第{}/{}批第{}个文本块向量化失败，已跳过", currentBatch, totalBatches, i + 1);
+            }
+        }
+
+        if (vectors.isEmpty() && !batchChunks.isEmpty()) {
+            throw new RuntimeException("第" + currentBatch + "/" + totalBatches + "批所有文本块向量化均失败");
+        }
+        if (failedCount > 0) {
+            log.warn("第{}/{}批向量化完成，{}/{}个成功，{}个失败",
+                    currentBatch, totalBatches, vectors.size(), batchChunks.size(), failedCount);
+        } else {
+            log.info("第{}/{}批向量化成功", currentBatch, totalBatches);
+        }
+        return vectors;
     }
 
     private void updateDocumentStatus(Long documentId, DocumentStatus status, String errorMsg) {

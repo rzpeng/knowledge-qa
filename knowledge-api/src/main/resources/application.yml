@@ -32,6 +32,7 @@ milvus:
   collection-name: knowledge_vectors
 
 
+
 # RAG配置
 rag:
   chunk-size: 500

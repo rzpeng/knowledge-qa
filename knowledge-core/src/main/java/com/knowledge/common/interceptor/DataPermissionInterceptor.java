@@ -8,19 +8,25 @@ import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Component;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-public class DataPermissionInterceptor implements InnerInterceptor {
+@Component
+public class DataPermissionInterceptor implements InnerInterceptor, ApplicationContextAware {
 
-    private final DataScopeService dataScopeService;
+    private ApplicationContext applicationContext;
 
-    public DataPermissionInterceptor(DataScopeService dataScopeService) {
-        this.dataScopeService = dataScopeService;
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
     }
 
     @Override
@@ -44,7 +50,8 @@ public class DataPermissionInterceptor implements InnerInterceptor {
             return;
         }
 
-        // Build data scope SQL
+        // Build data scope SQL — lazily resolve DataScopeService to avoid circular dependency
+        DataScopeService dataScopeService = applicationContext.getBean(DataScopeService.class);
         String dataSql = dataScopeService.buildDataScopeSql(dataPermission);
         if (!StringUtils.hasText(dataSql)) {
             return;

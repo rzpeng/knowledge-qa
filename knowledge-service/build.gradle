@@ -11,6 +11,7 @@ dependencies {
     implementation 'dev.langchain4j:langchain4j:0.34.0'
     implementation 'dev.langchain4j:langchain4j-zhipu-ai:0.34.0'
     implementation 'dev.langchain4j:langchain4j-open-ai:0.34.0'
+    implementation 'ai.z.openapi:zai-sdk:0.3.3'
 
     // Milvus
     implementation('io.milvus:milvus-sdk-java:2.4.1') {

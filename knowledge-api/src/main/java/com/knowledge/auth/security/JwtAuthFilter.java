@@ -29,6 +29,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String username = claims.getSubject();
             Long userId = claims.get("userId", Long.class);
             Long accountId = claims.get("accountId", Long.class);
+            Integer isSuperAdmin = claims.get("isSuperAdmin", Integer.class);
             @SuppressWarnings("unchecked")
             List<String> permissions = claims.get("permissions", List.class);
             if (permissions == null) permissions = List.of();
@@ -37,6 +38,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     .userId(userId)
                     .accountId(accountId)
                     .username(username)
+                    .isSuperAdmin(isSuperAdmin)
                     .permissions(permissions)
                     .build();
 

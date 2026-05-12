@@ -22,7 +22,7 @@ public class AuthService {
         LoginUserDetails user = (LoginUserDetails) auth.getPrincipal();
 
         String accessToken = jwtUtils.generateAccessToken(
-                user.getUserId(), user.getAccountId(), user.getUsername(), user.getPermissions());
+                user.getUserId(), user.getAccountId(), user.getUsername(), user.getIsSuperAdmin(), user.getPermissions());
         String refreshToken = jwtUtils.generateRefreshToken(user.getAccountId());
 
         LoginResult result = new LoginResult();

@@ -13,6 +13,8 @@
           :default-active="activeMenu"
           class="sidebar-menu"
           router
+          text-color="rgba(255,255,255,0.8)"
+          background-color="transparent"
         >
           <el-menu-item index="/chat">
             <el-icon><ChatDotRound /></el-icon>
@@ -126,12 +128,29 @@ html, body, #app {
 }
 
 .sidebar-menu .el-menu-item {
+  background-color: transparent;
   color: rgba(255,255,255,0.8);
 }
 
 .sidebar-menu .el-menu-item:hover,
 .sidebar-menu .el-menu-item.is-active {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.1) !important;
+  color: #fff;
+}
+
+/* Sub-menu items inside the sidebar */
+.sidebar-menu .el-sub-menu .el-menu {
+  background-color: transparent;
+}
+
+.sidebar-menu .el-sub-menu .el-menu-item {
+  background-color: transparent;
+  color: rgba(255,255,255,0.65);
+}
+
+.sidebar-menu .el-sub-menu .el-menu-item:hover,
+.sidebar-menu .el-sub-menu .el-menu-item.is-active {
+  background: rgba(255,255,255,0.1) !important;
   color: #fff;
 }
 

@@ -12,13 +12,11 @@ import io.milvus.param.dml.SearchParam;
 import io.milvus.param.index.CreateIndexParam;
 import io.milvus.response.MutationResultWrapper;
 import io.milvus.response.SearchResultsWrapper;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-// ... existing code ...
-import jakarta.annotation.PostConstruct;
-// ... existing code ...
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,21 +32,26 @@ public class MilvusVectorStore {
     private static final String DOCUMENT_ID_FIELD = "document_id";
     private static final int VECTOR_DIMENSION = 1024;
 
-    private final MilvusServiceClient milvusClient;
+    @Autowired(required = false)
+    private MilvusServiceClient milvusClient;
     private final String collectionName;
 
-    public MilvusVectorStore(MilvusServiceClient milvusClient,
-                             @Value("${milvus.collection-name:knowledge_vectors}") String collectionName) {
-        this.milvusClient = milvusClient;
+    public MilvusVectorStore(@Value("${milvus.collection-name:knowledge_vectors}") String collectionName) {
         this.collectionName = collectionName;
     }
 
     @PostConstruct
     public void init() {
+        if (milvusClient == null) {
+            log.warn("Milvus client not available, skipping collection initialization");
+            return;
+        }
         createCollectionIfNotExists();
     }
 
     private void createCollectionIfNotExists() {
+        if (milvusClient == null) return;
+
         R<Boolean> hasCollection = milvusClient.hasCollection(HasCollectionParam.newBuilder()
                 .withCollectionName(collectionName)
                 .build());
@@ -102,6 +105,8 @@ public class MilvusVectorStore {
     }
 
     private void createIndex() {
+        if (milvusClient == null) return;
+
         CreateIndexParam indexParam = CreateIndexParam.newBuilder()
                 .withCollectionName(collectionName)
                 .withFieldName(VECTOR_FIELD)
@@ -118,6 +123,10 @@ public class MilvusVectorStore {
     }
 
     public List<Long> insert(List<String> contents, List<float[]> vectors, Long documentId) {
+        if (milvusClient == null) {
+            log.warn("Milvus not available, skipping insert");
+            return Collections.emptyList();
+        }
         loadCollection();
 
         List<List<Float>> vectorList = new ArrayList<>();
@@ -148,6 +157,10 @@ public class MilvusVectorStore {
     }
 
     public List<SearchResult> search(float[] queryVector, int topK) {
+        if (milvusClient == null) {
+            log.warn("Milvus not available, returning empty search results");
+            return Collections.emptyList();
+        }
         loadCollection();
 
         List<Float> floatList = new ArrayList<>();
@@ -188,6 +201,8 @@ public class MilvusVectorStore {
     }
 
     public void deleteByDocumentId(Long documentId) {
+        if (milvusClient == null) return;
+
         String expr = DOCUMENT_ID_FIELD + " == " + documentId;
         milvusClient.delete(DeleteParam.newBuilder()
                 .withCollectionName(collectionName)
@@ -196,6 +211,7 @@ public class MilvusVectorStore {
     }
 
     private void loadCollection() {
+        if (milvusClient == null) return;
         milvusClient.loadCollection(LoadCollectionParam.newBuilder()
                 .withCollectionName(collectionName)
                 .build());

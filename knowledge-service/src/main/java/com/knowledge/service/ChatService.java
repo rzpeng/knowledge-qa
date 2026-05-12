@@ -16,6 +16,7 @@ import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.output.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -48,7 +49,8 @@ public class ChatService {
 
     private final ChatSessionMapper sessionMapper;
     private final ChatMessageMapper messageMapper;
-    private final MilvusVectorStore vectorStore;
+    @Autowired
+    private MilvusVectorStore vectorStore;
     private final EmbeddingModel embeddingModel;
     private final ChatLanguageModel chatModel;
     private final RagProperties ragProperties;
