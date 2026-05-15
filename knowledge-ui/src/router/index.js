@@ -23,6 +23,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/agent',
+    name: 'Agent',
+    component: () => import('@/views/AgentView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/system',
     redirect: '/system/user',
     meta: { requiresAuth: true }

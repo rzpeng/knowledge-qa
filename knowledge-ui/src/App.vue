@@ -24,6 +24,10 @@
             <el-icon><Document /></el-icon>
             <span>文档管理</span>
           </el-menu-item>
+          <el-menu-item index="/agent">
+            <el-icon><MagicStick /></el-icon>
+            <span>智能助手</span>
+          </el-menu-item>
           <el-sub-menu index="/system" v-if="hasSystemAccess">
             <template #title>
               <el-icon><Setting /></el-icon>
