@@ -6,6 +6,7 @@ dependencies {
     // Spring Boot
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 
     // LangChain4j - Try different version
     implementation 'dev.langchain4j:langchain4j:0.34.0'
