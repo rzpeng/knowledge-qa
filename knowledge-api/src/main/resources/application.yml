@@ -42,3 +42,9 @@ rag:
 # 文件存储配置
 file:
   upload-path: ./uploads
+
+# Agent配置
+agent:
+  file-base-path: ./agent-files
+  max-tool-iterations: 5
+  max-history-messages: 20

@@ -1,6 +1,5 @@
 package com.knowledge.agent.tool;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -14,17 +13,11 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class DatabaseQueryTool implements Tool {
 
-    private final ToolRegistry toolRegistry;
     private final JdbcTemplate jdbcTemplate;
 
     private static final Pattern SELECT_PATTERN = Pattern.compile(
             "^\\s*SELECT\\s+.*", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     private static final int MAX_ROWS = 100;
-
-    @PostConstruct
-    public void init() {
-        toolRegistry.register(this);
-    }
 
     @Override
     public String name() {

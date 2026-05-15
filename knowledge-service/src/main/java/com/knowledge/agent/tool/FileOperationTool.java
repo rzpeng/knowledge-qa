@@ -1,7 +1,6 @@
 package com.knowledge.agent.tool;
 
 import com.knowledge.agent.config.AgentProperties;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,13 +18,7 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class FileOperationTool implements Tool {
 
-    private final ToolRegistry toolRegistry;
     private final AgentProperties agentProperties;
-
-    @PostConstruct
-    public void init() {
-        toolRegistry.register(this);
-    }
 
     @Override
     public String name() {

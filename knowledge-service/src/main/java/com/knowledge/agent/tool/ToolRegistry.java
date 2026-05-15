@@ -17,7 +17,10 @@ public class ToolRegistry {
 
     private final Map<String, Tool> tools = new LinkedHashMap<>();
 
-    public ToolRegistry() {
+    public ToolRegistry(List<Tool> toolBeans) {
+        for (Tool tool : toolBeans) {
+            tools.put(tool.name(), tool);
+        }
     }
 
     @PostConstruct

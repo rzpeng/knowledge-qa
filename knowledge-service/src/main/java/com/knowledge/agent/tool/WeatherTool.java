@@ -3,7 +3,6 @@ package com.knowledge.agent.tool;
 import cn.hutool.http.HttpUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -16,15 +15,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WeatherTool implements Tool {
 
-    private final ToolRegistry toolRegistry;
     private final ObjectMapper objectMapper;
 
     private static final String WEATHER_API = "https://api.open-meteo.com/v1/forecast";
-
-    @PostConstruct
-    public void init() {
-        toolRegistry.register(this);
-    }
 
     @Override
     public String name() {

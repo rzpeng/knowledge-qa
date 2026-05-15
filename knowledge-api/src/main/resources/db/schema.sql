@@ -242,3 +242,28 @@ INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
 SELECT '地区编辑', id, 2, 'system:region:edit', 2 FROM sys_menu WHERE permission = 'system:region:list';
 INSERT INTO sys_menu (name, parent_id, type, permission, sort_order)
 SELECT '地区删除', id, 2, 'system:region:delete', 3 FROM sys_menu WHERE permission = 'system:region:list';
+
+-- ========== Agent 智能助手模块表结构 ==========
+
+-- Agent 会话表
+CREATE TABLE IF NOT EXISTS agent_session (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    title VARCHAR(255) NOT NULL COMMENT '会话标题',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Agent会话表';
+
+-- Agent 消息表
+CREATE TABLE IF NOT EXISTS agent_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    session_id BIGINT NOT NULL COMMENT '会话ID',
+    role VARCHAR(20) NOT NULL COMMENT '角色：USER/ASSISTANT/TOOL',
+    content TEXT COMMENT '消息内容',
+    tool_name VARCHAR(100) COMMENT '工具名称',
+    tool_args TEXT COMMENT '工具参数(JSON)',
+    tool_result TEXT COMMENT '工具执行结果(JSON)',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    INDEX idx_session_id (session_id),
+    INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Agent消息表';
