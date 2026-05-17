@@ -1,6 +1,5 @@
 package com.knowledge.agent.tool;
 
-import cn.hutool.http.HttpUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +17,7 @@ public class WeatherTool implements Tool {
     private final ObjectMapper objectMapper;
 
     private static final String WEATHER_API = "https://api.open-meteo.com/v1/forecast";
+    private static final String GEO_API = "https://geocoding-api.open-meteo.com/v1/search";
 
     @Override
     public String name() {
@@ -56,13 +56,24 @@ public class WeatherTool implements Tool {
                 return ToolResult.fail("未找到城市: " + city);
             }
 
-            String url = WEATHER_API + "?latitude=" + coords[0]
+            java.net.URL url = new java.net.URL(WEATHER_API + "?latitude=" + coords[0]
                     + "&longitude=" + coords[1]
                     + "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
                     + "&daily=temperature_2m_max,temperature_2m_min,weather_code"
-                    + "&timezone=Asia/Shanghai";
-
-            String response = HttpUtil.get(url, 5000);
+                    + "&timezone=Asia/Shanghai");
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Accept-Encoding", "identity");
+            String response;
+            try (java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(conn.getInputStream(), "UTF-8"))) {
+                String line;
+                StringBuilder sb = new StringBuilder();
+                while ((line = br.readLine()) != null) sb.append(line);
+                response = sb.toString();
+            }
             JsonNode root = objectMapper.readTree(response);
             JsonNode current = root.get("current");
 
@@ -83,24 +94,45 @@ public class WeatherTool implements Tool {
     }
 
     private double[] getCoordinates(String city) {
-        Map<String, double[]> cityMap = Map.ofEntries(
-                Map.entry("北京", new double[]{39.9042, 116.4074}),
-                Map.entry("上海", new double[]{31.2304, 121.4737}),
-                Map.entry("广州", new double[]{23.1291, 113.2644}),
-                Map.entry("深圳", new double[]{22.5431, 114.0579}),
-                Map.entry("杭州", new double[]{30.2741, 120.1551}),
-                Map.entry("成都", new double[]{30.5728, 104.0668}),
-                Map.entry("武汉", new double[]{30.5928, 114.3055}),
-                Map.entry("南京", new double[]{32.0603, 118.7969}),
-                Map.entry("西安", new double[]{34.3416, 108.9398}),
-                Map.entry("重庆", new double[]{29.4316, 106.9123})
-        );
-        double[] coords = cityMap.get(city);
-        if (coords != null) return coords;
-        for (Map.Entry<String, double[]> entry : cityMap.entrySet()) {
-            if (city.contains(entry.getKey())) {
-                return entry.getValue();
+        try {
+            String encodedCity = java.net.URLEncoder.encode(city, "UTF-8");
+            java.net.URL geoUrl = new java.net.URL(GEO_API + "?name=" + encodedCity
+                    + "&count=5&language=zh&format=json");
+            log.info("Geocoding URL: {}", geoUrl);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) geoUrl.openConnection();
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            conn.setRequestMethod("GET");
+            String geoResponse;
+            try (java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(conn.getInputStream(), "UTF-8"))) {
+                String line;
+                StringBuilder sb = new StringBuilder();
+                while ((line = br.readLine()) != null) sb.append(line);
+                geoResponse = sb.toString();
             }
+            JsonNode geoRoot = objectMapper.readTree(geoResponse);
+            JsonNode results = geoRoot.get("results");
+            if (results != null && results.isArray() && results.size() > 0) {
+                // Prefer Chinese result (country=CN) if multiple matches
+                for (JsonNode node : results) {
+                    JsonNode country = node.get("country_code");
+                    if (country != null && "CN".equalsIgnoreCase(country.asText())) {
+                        return new double[]{
+                                node.get("latitude").asDouble(),
+                                node.get("longitude").asDouble()
+                        };
+                    }
+                }
+                // Fall back to first result
+                JsonNode first = results.get(0);
+                return new double[]{
+                        first.get("latitude").asDouble(),
+                        first.get("longitude").asDouble()
+                };
+            }
+        } catch (Exception e) {
+            log.warn("Geocoding API failed for city '{}', falling back to static map", city, e);
         }
         return null;
     }

@@ -18,6 +18,9 @@ public class DeepSeekAiConfig {
     @Value("${deepseek.model:deepseek-v4-flash}")
     private String model;
 
+    @Value("${deepseek.agent-model:deepseek-chat}")
+    private String agentModel;
+
     @Value("${deepseek.base-url:https://api.deepseek.com}")
     private String baseUrl;
 
@@ -28,6 +31,17 @@ public class DeepSeekAiConfig {
         return OpenAiChatModel.builder()
                 .apiKey(apiKey)
                 .modelName(model)
+                .baseUrl(baseUrl)
+                .timeout(Duration.ofSeconds(60))
+                .build();
+    }
+
+    @Bean
+    @Qualifier("agentChatModel")
+    public OpenAiChatModel agentChatModel() {
+        return OpenAiChatModel.builder()
+                .apiKey(apiKey)
+                .modelName(agentModel)
                 .baseUrl(baseUrl)
                 .timeout(Duration.ofSeconds(60))
                 .build();

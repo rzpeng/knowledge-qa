@@ -38,6 +38,20 @@ rag:
   chunk-size: 500
   chunk-overlap: 50
   top-k: 5
+  # 混合检索
+  hybrid-search-enabled: true
+  bm25-top-k: 10
+  vector-top-k: 10
+  rrf-k: 60
+  # 重排序
+  rerank-enabled: true
+  rerank-candidate-count: 15
+  # 查询改写
+  query-rewrite-enabled: true
+  # 父子分块
+  parent-child-enabled: true
+  child-chunk-size: 200
+  parent-chunk-size: 500
 
 # 文件存储配置
 file:

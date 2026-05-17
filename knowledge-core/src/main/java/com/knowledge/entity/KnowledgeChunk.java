@@ -22,5 +22,11 @@ public class KnowledgeChunk {
 
     private String vectorId;
 
+    /** Parent chunk content (parent-child chunking), used as richer LLM context */
+    private String parentContent;
+
+    /** Parent chunk index */
+    private Integer parentIndex;
+
     private LocalDateTime createTime;
 }

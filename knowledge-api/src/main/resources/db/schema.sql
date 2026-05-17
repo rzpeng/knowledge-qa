@@ -185,6 +185,16 @@ CREATE TABLE IF NOT EXISTS sys_role_region (
     UNIQUE KEY uk_role_region (role_id, region_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色数据权限地区关联表';
 
+-- ========== RAG 优化相关 DDL ==========
+
+-- 为 knowledge_chunk 添加 BM25 全文检索索引（使用 ngram 解析器支持中文）
+ALTER TABLE knowledge_chunk ADD FULLTEXT INDEX ft_knowledge_chunk_content (content) WITH PARSER ngram;
+
+-- 为 knowledge_chunk 添加父块字段（父子分块策略）
+ALTER TABLE knowledge_chunk
+    ADD COLUMN parent_content TEXT COMMENT '父块内容（更大上下文，用于LLM输入）',
+    ADD COLUMN parent_index INT COMMENT '父块序号';
+
 -- 初始化默认菜单数据
 INSERT INTO sys_menu (name, parent_id, type, permission, path, component, icon, sort_order) VALUES
 ('系统管理', 0, 0, NULL, '/system', NULL, 'Setting', 1),
@@ -262,6 +272,7 @@ CREATE TABLE IF NOT EXISTS agent_message (
     content TEXT COMMENT '消息内容',
     tool_name VARCHAR(100) COMMENT '工具名称',
     tool_args TEXT COMMENT '工具参数(JSON)',
+    tool_call_id VARCHAR(255) COMMENT '工具调用ID(用于匹配工具结果)',
     tool_result TEXT COMMENT '工具执行结果(JSON)',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     INDEX idx_session_id (session_id),

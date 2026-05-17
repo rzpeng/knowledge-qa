@@ -9,6 +9,7 @@ import com.knowledge.enums.FileType;
 import com.knowledge.mapper.KnowledgeChunkMapper;
 import com.knowledge.mapper.KnowledgeDocumentMapper;
 import com.knowledge.rag.MilvusVectorStore;
+import com.knowledge.rag.chunking.SemanticChunker;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class DocumentProcessService {
     private final MilvusVectorStore vectorStore;
     private final EmbeddingModel embeddingModel;
     private final RagProperties ragProperties;
+    private final SemanticChunker semanticChunker;
 
 
     private static final int MAX_RETRIES = 3;
@@ -61,11 +63,35 @@ public class DocumentProcessService {
 
         FileType fileType = FileType.fromExtension(document.getFileType());
         String content = parserService.parseDocument(file, fileType);
-        List<String> chunks = parserService.splitIntoChunks(
-                content,
-                ragProperties.getChunkSize(),
-                ragProperties.getChunkOverlap()
-        );
+
+        List<String> chunks;
+        List<String> parentContents;
+        List<Integer> parentIndices;
+
+        if (ragProperties.isParentChildEnabled()) {
+            // Parent-child chunking: small chunks for retrieval, parent for LLM context
+            List<SemanticChunker.ChildChunk> childChunks = semanticChunker.split(content);
+            chunks = new ArrayList<>();
+            parentContents = new ArrayList<>();
+            parentIndices = new ArrayList<>();
+            for (SemanticChunker.ChildChunk cc : childChunks) {
+                chunks.add(cc.getContent());
+                parentContents.add(cc.getParentContent());
+                parentIndices.add(cc.getParentIndex());
+            }
+            log.info("Parent-child chunking: {} child chunks from {} parent chunks (childSize={}, parentSize={})",
+                    chunks.size(), parentIndices.stream().distinct().count(),
+                    ragProperties.getChildChunkSize(), ragProperties.getParentChunkSize());
+        } else {
+            // Legacy chunking
+            chunks = parserService.splitIntoChunks(
+                    content,
+                    ragProperties.getChunkSize(),
+                    ragProperties.getChunkOverlap()
+            );
+            parentContents = null;
+            parentIndices = null;
+        }
 
         List<Long> vectorIds = new ArrayList<>();
 
@@ -80,6 +106,10 @@ public class DocumentProcessService {
                 chunk.setContent(chunks.get(i));
                 chunk.setChunkIndex(i);
                 chunk.setVectorId(String.valueOf(vectorIds.get(i)));
+                if (parentContents != null) {
+                    chunk.setParentContent(parentContents.get(i));
+                    chunk.setParentIndex(parentIndices.get(i));
+                }
                 chunk.setCreateTime(LocalDateTime.now());
                 chunkMapper.insert(chunk);
             }

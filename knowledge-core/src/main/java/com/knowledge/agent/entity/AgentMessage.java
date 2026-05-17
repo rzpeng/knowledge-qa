@@ -24,6 +24,8 @@ public class AgentMessage {
 
     private String toolArgs;      // JSON arguments for ASSISTANT with tool calls
 
+    private String toolCallId;    // tool call ID for TOOL role (matching ASSISTANT's tool call)
+
     private String toolResult;    // JSON result for TOOL role
 
     private LocalDateTime createTime;

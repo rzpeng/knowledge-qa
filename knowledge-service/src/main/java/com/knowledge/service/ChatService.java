@@ -4,9 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.knowledge.config.RagProperties;
 import com.knowledge.entity.ChatMessage;
 import com.knowledge.entity.ChatSession;
+import com.knowledge.entity.KnowledgeChunk;
 import com.knowledge.enums.MessageRole;
 import com.knowledge.mapper.ChatMessageMapper;
 import com.knowledge.mapper.ChatSessionMapper;
+import com.knowledge.mapper.KnowledgeChunkMapper;
+import com.knowledge.rag.HybridRetriever;
 import com.knowledge.rag.MilvusVectorStore;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.SystemMessage;
@@ -55,6 +58,8 @@ public class ChatService {
     private final ChatLanguageModel chatModel;
     private final RagProperties ragProperties;
     private final StringRedisTemplate redisTemplate;
+    private final HybridRetriever hybridRetriever;
+    private final KnowledgeChunkMapper chunkMapper;
 
     public List<ChatSession> listSessions() {
         return sessionMapper.selectList(
@@ -90,9 +95,24 @@ public class ChatService {
 
         List<MilvusVectorStore.SearchResult> searchResults = searchKnowledge(question);
 
-        String context = searchResults.stream()
-                .map(r -> "- " + r.content())
-                .collect(Collectors.joining("\n\n"));
+        // Enrich with parent content when parent-child chunking is enabled
+        String context;
+        if (ragProperties.isParentChildEnabled()) {
+            context = searchResults.stream()
+                    .map(r -> {
+                        String parentContent = lookupParentContent(r);
+                        if (parentContent != null) {
+                            return "- " + parentContent;
+                        }
+                        return "- " + r.content();
+                    })
+                    .distinct()
+                    .collect(Collectors.joining("\n\n"));
+        } else {
+            context = searchResults.stream()
+                    .map(r -> "- " + r.content())
+                    .collect(Collectors.joining("\n\n"));
+        }
 
         String prompt = String.format(CONTEXT_TEMPLATE, context, question);
 
@@ -121,9 +141,30 @@ public class ChatService {
     }
 
     private List<MilvusVectorStore.SearchResult> searchKnowledge(String question) {
+        if (ragProperties.isHybridSearchEnabled()) {
+            return hybridRetriever.hybridSearch(question);
+        }
+        // Fallback to pure vector search
         Response<dev.langchain4j.data.embedding.Embedding> response = embeddingModel.embed(question);
         float[] vector = response.content().vector();
         return vectorStore.search(vector, ragProperties.getTopK());
+    }
+
+    /**
+     * Look up parent content from MySQL when parent-child chunking is enabled.
+     * Returns the parent content if found, null otherwise.
+     */
+    private String lookupParentContent(MilvusVectorStore.SearchResult result) {
+        if (result.vectorId() == null) return null;
+        try {
+            KnowledgeChunk chunk = chunkMapper.selectByVectorId(String.valueOf(result.vectorId()));
+            if (chunk != null && chunk.getParentContent() != null && !chunk.getParentContent().isBlank()) {
+                return chunk.getParentContent();
+            }
+        } catch (Exception e) {
+            log.debug("Failed to look up parent content for vectorId={}: {}", result.vectorId(), e.getMessage());
+        }
+        return null;
     }
 
     private void saveMessage(Long sessionId, MessageRole role, String content) {

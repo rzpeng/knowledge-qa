@@ -19,6 +19,8 @@ import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -32,20 +34,23 @@ public class AgentOrchestratorService {
 
     private final AgentSessionService sessionService;
     private final ToolRegistry toolRegistry;
-    private final ChatLanguageModel chatModel;
+    @Autowired
+    @Qualifier("agentChatModel")
+    private ChatLanguageModel chatModel;
     private final AgentProperties agentProperties;
     private final ObjectMapper objectMapper;
 
     public String processMessage(Long sessionId, String userInput) {
-        List<ChatMessage> messages = buildMessageList(sessionId, userInput);
-        List<ToolSpecification> toolSpecs = toolRegistry.getSpecifications();
-        String finalAnswer = executeAgentLoop(sessionId, messages, toolSpecs);
-
+        // Save user message first so history order is correct
         AgentMessage userMsg = new AgentMessage();
         userMsg.setSessionId(sessionId);
         userMsg.setRole("USER");
         userMsg.setContent(userInput);
         sessionService.saveMessage(userMsg);
+
+        List<ChatMessage> messages = buildMessageList(sessionId, userInput);
+        List<ToolSpecification> toolSpecs = toolRegistry.getSpecifications();
+        String finalAnswer = executeAgentLoop(sessionId, messages, toolSpecs);
 
         AgentMessage assistantMsg = new AgentMessage();
         assistantMsg.setSessionId(sessionId);
@@ -78,15 +83,21 @@ public class AgentOrchestratorService {
                 case "ASSISTANT" -> {
                     if (msg.getToolArgs() != null) {
                         List<ToolExecutionRequest> requests = parseToolRequests(msg.getToolArgs());
-                        messages.add(AiMessage.from(requests));
+                        if (!requests.isEmpty()) {
+                            messages.add(AiMessage.from(requests));
+                        } else if (msg.getContent() != null) {
+                            messages.add(AiMessage.from(msg.getContent()));
+                        }
                     } else {
                         messages.add(AiMessage.from(msg.getContent()));
                     }
                 }
                 case "TOOL" -> {
                     if (msg.getToolResult() != null) {
+                        String toolCallId = msg.getToolCallId() != null
+                                ? msg.getToolCallId() : msg.getToolName();
                         messages.add(new ToolExecutionResultMessage(
-                                msg.getToolName(),
+                                toolCallId,
                                 msg.getToolName(),
                                 msg.getToolResult()
                         ));
@@ -118,6 +129,9 @@ public class AgentOrchestratorService {
 
             for (ToolExecutionRequest request : aiMessage.toolExecutionRequests()) {
                 try {
+                    log.debug("Tool call: id={}, name={}, rawArgs={}",
+                            request.id(), request.name(), request.arguments());
+
                     Tool tool = toolRegistry.getTool(request.name());
                     if (tool == null) {
                         String error = "工具 '" + request.name() + "' 不存在";
@@ -127,8 +141,14 @@ public class AgentOrchestratorService {
                         continue;
                     }
 
-                    Map<String, Object> args = objectMapper.readValue(
-                            request.arguments(), new TypeReference<>() {});
+                    Map<String, Object> args;
+                    try {
+                        args = objectMapper.readValue(
+                                request.arguments(), new TypeReference<>() {});
+                    } catch (Exception e) {
+                        log.error("Failed to parse tool arguments: '{}'", request.arguments(), e);
+                        throw e;
+                    }
                     ToolResult result = tool.execute(args);
 
                     String resultStr = result.isSuccess()
@@ -140,8 +160,10 @@ public class AgentOrchestratorService {
                     saveToolResultMessage(sessionId, request.id(), request.name(), resultStr);
                 } catch (Exception e) {
                     log.error("Tool execution error: {}", e.getMessage());
+                    String errorMsg = "执行异常: " + e.getMessage();
                     messages.add(new ToolExecutionResultMessage(
-                            request.id(), request.name(), "执行异常: " + e.getMessage()));
+                            request.id(), request.name(), errorMsg));
+                    saveToolResultMessage(sessionId, request.id(), request.name(), errorMsg);
                 }
             }
 
@@ -154,7 +176,7 @@ public class AgentOrchestratorService {
                 : "已达最大工具调用次数，请简化问题后重试。";
     }
 
-    private void saveToolCallMessage(Long sessionId, List<ToolExecutionRequest> requests) {
+    /*private void saveToolCallMessage(Long sessionId, List<ToolExecutionRequest> requests) {
         try {
             AgentMessage msg = new AgentMessage();
             msg.setSessionId(sessionId);
@@ -164,7 +186,35 @@ public class AgentOrchestratorService {
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize tool requests", e);
         }
+    }*/
+
+    private void saveToolCallMessage(Long sessionId, List<ToolExecutionRequest> requests) {
+        try {
+            AgentMessage msg = new AgentMessage();
+            msg.setSessionId(sessionId);
+            msg.setRole("ASSISTANT");
+            List<Map<String, Object>> requestMaps = requests.stream()
+                    .map(request -> {
+                        Map<String, Object> map = new java.util.HashMap<>();
+                        map.put("id", request.id());
+                        map.put("name", request.name());
+                        try {
+                            Map<String, Object> args = objectMapper.readValue(
+                                    request.arguments(), new TypeReference<>() {});
+                            map.put("arguments", args);
+                        } catch (JsonProcessingException e) {
+                            map.put("arguments", request.arguments());
+                        }
+                        return map;
+                    })
+                    .toList();
+            msg.setToolArgs(objectMapper.writeValueAsString(requestMaps));
+            sessionService.saveMessage(msg);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize tool requests", e);
+        }
     }
+
 
     private void saveToolResultMessage(Long sessionId, String toolCallId,
                                         String toolName, String result) {
@@ -172,6 +222,7 @@ public class AgentOrchestratorService {
         msg.setSessionId(sessionId);
         msg.setRole("TOOL");
         msg.setToolName(toolName);
+        msg.setToolCallId(toolCallId);
         msg.setToolResult(result);
         sessionService.saveMessage(msg);
     }
@@ -186,7 +237,25 @@ public class AgentOrchestratorService {
 
     private List<ToolExecutionRequest> parseToolRequests(String json) {
         try {
-            return objectMapper.readValue(json, new TypeReference<>() {});
+            List<Map<String, Object>> rawList = objectMapper.readValue(json, new TypeReference<>() {});
+            List<ToolExecutionRequest> result = new ArrayList<>();
+            for (Map<String, Object> raw : rawList) {
+                String id = (String) raw.get("id");
+                String name = (String) raw.get("name");
+                Object args = raw.get("arguments");
+                String argumentsStr;
+                if (args instanceof String) {
+                    argumentsStr = (String) args;
+                } else {
+                    argumentsStr = objectMapper.writeValueAsString(args);
+                }
+                result.add(ToolExecutionRequest.builder()
+                        .id(id)
+                        .name(name)
+                        .arguments(argumentsStr)
+                        .build());
+            }
+            return result;
         } catch (Exception e) {
             log.error("Failed to parse tool requests: {}", json, e);
             return List.of();

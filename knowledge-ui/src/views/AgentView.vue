@@ -25,52 +25,56 @@
     </div>
     <div class="chat-main">
       <div class="message-list" ref="messageListRef">
-        <div v-if="messages.length === 0" class="empty-state">
+        <div v-if="displayMessages.length === 0 && !loading" class="empty-state">
           <el-icon :size="60"><MagicStick /></el-icon>
           <p>智能助手可以帮你查询信息、执行计算、操作文件等</p>
         </div>
-        <template v-for="msg in messages" :key="msg.id">
-          <div v-if="msg.role === 'TOOL'" class="message tool">
-            <div class="tool-call">
-              <el-collapse accordion>
-                <el-collapse-item>
-                  <template #title>
-                    <span class="tool-title">🛠 {{ msg.toolName }}</span>
-                  </template>
-                  <div class="tool-detail">
-                    <div class="tool-section">
-                      <span class="tool-label">参数:</span>
-                      <pre>{{ formatJson(msg.toolArgs) }}</pre>
-                    </div>
-                    <div class="tool-section">
-                      <span class="tool-label">结果:</span>
-                      <pre>{{ formatJson(msg.toolResult) }}</pre>
-                    </div>
-                  </div>
-                </el-collapse-item>
-              </el-collapse>
-            </div>
+        <div
+          v-for="item in displayMessages"
+          :key="item.id"
+          :class="['message-row', item.type === 'user' ? 'user-row' : 'ai-row']"
+        >
+          <div class="message-sender">
+            <el-avatar v-if="item.type === 'user'" :size="36" class="user-avatar">我</el-avatar>
+            <el-avatar v-else :size="36" class="ai-avatar">AI</el-avatar>
           </div>
-          <div v-else :class="['message', msg.role]">
-            <div class="message-avatar">
-              <el-avatar v-if="msg.role === 'user'" :size="32">我</el-avatar>
-              <el-avatar v-else :size="32" class="ai-avatar">AI</el-avatar>
-            </div>
-            <div class="message-content">
-              <div v-if="msg.toolName" class="tool-badge">
-                🛠 调用工具: {{ msg.toolName }}
+          <div class="message-body">
+            <div class="sender-name">{{ item.type === 'user' ? '我' : 'AI 智能助手' }}</div>
+            <div class="bubble" :class="item.type === 'user' ? 'user-bubble' : 'ai-bubble'">
+              <div v-if="item.tools && item.tools.length > 0" class="tool-section">
+                <el-collapse accordion>
+                  <el-collapse-item>
+                    <template #title>
+                      <span class="tool-call-count">🛠 调用了 {{ item.tools.length }} 个工具</span>
+                    </template>
+                    <div v-for="(tool, idx) in item.tools" :key="idx" class="tool-detail">
+                      <div class="tool-name">{{ tool.name }}</div>
+                      <div class="tool-args">
+                        <span class="detail-label">参数:</span>
+                        <pre>{{ formatJson(tool.arguments) }}</pre>
+                      </div>
+                      <div v-if="tool.result" class="tool-result">
+                        <span class="detail-label">结果:</span>
+                        <pre>{{ tool.result }}</pre>
+                      </div>
+                    </div>
+                  </el-collapse-item>
+                </el-collapse>
               </div>
-              <div class="message-text" v-html="formatMessage(msg.content || '')"></div>
+              <div class="message-text" v-html="formatMessage(item.content)"></div>
             </div>
           </div>
-        </template>
-        <div v-if="loading" class="message assistant">
-          <div class="message-avatar">
-            <el-avatar :size="32" class="ai-avatar">AI</el-avatar>
+        </div>
+        <div v-if="loading" class="message-row ai-row">
+          <div class="message-sender">
+            <el-avatar :size="36" class="ai-avatar">AI</el-avatar>
           </div>
-          <div class="message-content">
-            <div class="message-text loading">
-              <span></span><span></span><span></span>
+          <div class="message-body">
+            <div class="sender-name">AI 智能助手</div>
+            <div class="bubble ai-bubble">
+              <div class="loading-dots">
+                <span></span><span></span><span></span>
+              </div>
             </div>
           </div>
         </div>
@@ -80,7 +84,7 @@
           v-model="inputText"
           type="textarea"
           :rows="3"
-          placeholder="输入你的需求，我会调用工具来帮助你..."
+          placeholder="输入你的需求..."
           @keydown.enter.ctrl="sendMessage"
           :disabled="!currentSession || loading"
         />
@@ -94,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { agentApi } from '@/api/agent'
 import { marked } from 'marked'
 import { ElMessage } from 'element-plus'
@@ -105,6 +109,41 @@ const messages = ref([])
 const inputText = ref('')
 const loading = ref(false)
 const messageListRef = ref(null)
+
+const displayMessages = computed(() => {
+  const result = []
+  let pendingToolCalls = []
+
+  for (const msg of messages.value) {
+    if (msg.role === 'USER') {
+      pendingToolCalls = []
+      result.push({ type: 'user', content: msg.content || '', id: msg.id })
+    } else if (msg.role === 'ASSISTANT') {
+      if (msg.toolArgs) {
+        try {
+          const tools = JSON.parse(msg.toolArgs)
+          if (Array.isArray(tools)) {
+            pendingToolCalls.push(...tools)
+          }
+        } catch { /* ignore parse errors */ }
+      }
+      if (msg.content) {
+        result.push({
+          type: 'assistant',
+          content: msg.content,
+          tools: pendingToolCalls.length > 0 ? [...pendingToolCalls] : null,
+          id: msg.id
+        })
+        pendingToolCalls = []
+      }
+    } else if (msg.role === 'TOOL' && pendingToolCalls.length > 0) {
+      // Attach tool result to the pending tool call that matches
+      const tc = pendingToolCalls.find(t => t.id === msg.toolCallId || t.name === msg.toolName)
+      if (tc) tc.result = msg.toolResult
+    }
+  }
+  return result
+})
 
 onMounted(async () => {
   await loadSessions()
@@ -262,6 +301,7 @@ const scrollToBottom = () => {
   white-space: nowrap;
 }
 
+/* Chat main area */
 .chat-main {
   flex: 1;
   display: flex;
@@ -272,7 +312,7 @@ const scrollToBottom = () => {
 .message-list {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 20px 40px;
 }
 
 .empty-state {
@@ -285,94 +325,128 @@ const scrollToBottom = () => {
   gap: 12px;
 }
 
-.message {
+/* Message layout: left for AI, right for user */
+.message-row {
   display: flex;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  max-width: 85%;
 }
 
-.message.user {
+.user-row {
+  margin-left: auto;
   flex-direction: row-reverse;
 }
 
-.message.tool {
-  justify-content: center;
-  margin-bottom: 4px;
+.message-sender {
+  flex-shrink: 0;
+  margin-top: 20px;
 }
 
-.message-content {
-  max-width: 70%;
-}
-
-.message-text {
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: #fff;
-  line-height: 1.6;
-}
-
-.message.user .message-text {
+.user-avatar {
   background: #409eff;
-  color: #fff;
 }
 
 .ai-avatar {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.tool-badge {
+.message-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-row .message-body {
+  align-items: flex-end;
+}
+
+.sender-name {
   font-size: 12px;
   color: #909399;
-  margin-bottom: 4px;
-  padding-left: 4px;
+  padding: 0 4px;
 }
 
-.tool-call {
-  width: 90%;
+.bubble {
+  padding: 12px 16px;
+  border-radius: 12px;
+  line-height: 1.6;
+  font-size: 14px;
 }
 
-.tool-call :deep(.el-collapse-item__header) {
-  font-size: 13px;
-  padding-left: 8px;
-  background: #f0f2f5;
-  border-radius: 4px;
+.user-bubble {
+  background: #409eff;
+  color: #fff;
+  border-bottom-right-radius: 4px;
 }
 
-.tool-title {
-  font-weight: 600;
+.ai-bubble {
+  background: #fff;
+  color: #303133;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
-.tool-detail {
-  padding: 8px;
-}
-
+/* Tool calls inside AI bubble */
 .tool-section {
   margin-bottom: 8px;
 }
 
-.tool-label {
-  font-weight: 600;
+.tool-section :deep(.el-collapse-item__header) {
   font-size: 12px;
+  padding: 4px 8px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  height: 32px;
+}
+
+.tool-call-count {
+  font-weight: 500;
   color: #606266;
-  display: block;
+}
+
+.tool-detail {
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tool-detail:last-child {
+  border-bottom: none;
+}
+
+.tool-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #303133;
   margin-bottom: 4px;
 }
 
+.detail-label {
+  font-size: 11px;
+  color: #909399;
+  display: block;
+  margin-bottom: 2px;
+}
+
 .tool-detail pre {
-  background: #f5f7fa;
-  padding: 8px;
+  background: #fafafa;
+  padding: 6px 8px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
   overflow-x: auto;
   margin: 0;
+  max-height: 120px;
+  overflow-y: auto;
 }
 
-.loading {
+/* Loading */
+.loading-dots {
   display: flex;
   gap: 4px;
+  padding: 4px 0;
 }
 
-.loading span {
+.loading-dots span {
   width: 8px;
   height: 8px;
   background: #409eff;
@@ -380,20 +454,22 @@ const scrollToBottom = () => {
   animation: bounce 1.4s infinite ease-in-out;
 }
 
-.loading span:nth-child(1) { animation-delay: -0.32s; }
-.loading span:nth-child(2) { animation-delay: -0.16s; }
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
 
 @keyframes bounce {
   0%, 80%, 100% { transform: scale(0); }
   40% { transform: scale(1); }
 }
 
+/* Input area */
 .input-area {
   padding: 16px;
   background: #fff;
   display: flex;
   gap: 12px;
   align-items: flex-end;
+  border-top: 1px solid #e4e7ed;
 }
 
 .input-area .el-textarea {

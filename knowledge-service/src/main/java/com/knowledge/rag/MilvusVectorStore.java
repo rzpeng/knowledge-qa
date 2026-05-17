@@ -194,7 +194,7 @@ public class MilvusVectorStore {
             SearchResultsWrapper.IDScore score = idScores.get(i);
             String content = (String) contents.get(i);
             Long docId = (Long) docIds.get(i);
-            results.add(new SearchResult(content, score.getScore(), docId));
+            results.add(new SearchResult(content, score.getScore(), docId, score.getLongID()));
         }
 
         return results;
@@ -217,5 +217,5 @@ public class MilvusVectorStore {
                 .build());
     }
 
-    public record SearchResult(String content, double score, Long documentId) {}
+    public record SearchResult(String content, double score, Long documentId, Long vectorId) {}
 }
