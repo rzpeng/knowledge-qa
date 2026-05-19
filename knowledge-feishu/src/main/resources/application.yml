@@ -17,10 +17,10 @@ spring:
 # 飞书配置
 feishu:
   enabled: true                    # 启用飞书集成，true=启用，false=禁用
-  app-id: cli_aa8010692ebbdcd6  # 替换为您的飞书应用ID
-  app-secret: dJWxgrG0Yi72GphGU5FVvc7DSAiVUDLR # 替换为您的飞书应用密钥
-  bot-token: cli_aa8010692ebbdcd6 # 替换为您的机器人访问令牌
-  webhook-url: https://open.feishu.cn/app/cli_aa8010692ebbdcd6/event # 替换为您的Webhook URL
+  app-id: xxx  # 替换为您的飞书应用ID
+  app-secret: xxx # 替换为您的飞书应用密钥
+  bot-token: xxx # 替换为您的机器人访问令牌
+  webhook-url: xxx # 替换为您的Webhook URL
 
 # 日志配置
 logging:
