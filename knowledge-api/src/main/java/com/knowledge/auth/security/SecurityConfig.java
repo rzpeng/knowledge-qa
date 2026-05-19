@@ -32,6 +32,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/refresh").permitAll()
                 .requestMatchers("/api/agent/**").permitAll()
                 .requestMatchers("/api/chat/**").permitAll()
+                .requestMatchers("/api/feishu/**").permitAll()
                 .requestMatchers("/api/eval/**").permitAll()
                 .anyRequest().authenticated()
             )

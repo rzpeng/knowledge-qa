@@ -1,0 +1,50 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: knowledge-feishu
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/knowledge_qa?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# 飞书配置
+feishu:
+  enabled: true                    # 启用飞书集成，true=启用，false=禁用
+  app-id: cli_aa8010692ebbdcd6  # 替换为您的飞书应用ID
+  app-secret: dJWxgrG0Yi72GphGU5FVvc7DSAiVUDLR # 替换为您的飞书应用密钥
+  bot-token: cli_aa8010692ebbdcd6 # 替换为您的机器人访问令牌
+  webhook-url: https://open.feishu.cn/app/cli_aa8010692ebbdcd6/event # 替换为您的Webhook URL
+
+# 日志配置
+logging:
+  level:
+    com.knowledge.feishu: DEBUG
+    org.springframework.web: DEBUG
+
+# 开发环境配置
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:mysql://localhost:3306/knowledge_qa?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: dev_password
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: jdbc:mysql://prod-host:3306/knowledge_qa?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: prod_user
+    password: prod_password
